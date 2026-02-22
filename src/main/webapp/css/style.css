@@ -1,0 +1,144 @@
+/* ===================================
+   ANSH HOSPITAL MANAGEMENT SYSTEM
+   PROFESSIONAL ADMIN PANEL UI
+=================================== */
+
+/* ===== Root Colors ===== */
+:root {
+    --primary: #0d6efd;
+    --success: #198754;
+    --danger: #dc3545;
+    --warning: #fd7e14;
+    --dark-bg: #121212;
+    --card-dark: #1e1e2f;
+    --text-light: #ffffff;
+}
+
+/* ===== Global ===== */
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f4f6f9;
+    transition: 0.3s ease-in-out;
+}
+
+/* ===== DARK MODE ===== */
+body.dark-mode {
+    background: var(--dark-bg);
+    color: var(--text-light);
+}
+
+body.dark-mode .card,
+body.dark-mode .table,
+body.dark-mode .sidebar {
+    background: var(--card-dark);
+    color: white;
+}
+
+body.dark-mode .table thead {
+    background: #2c2c3c;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+    position: fixed;
+    height: 100vh;
+    width: 250px;
+    background: linear-gradient(180deg, #0d6efd, #198754);
+    padding-top: 20px;
+    color: white;
+    transition: 0.3s;
+}
+
+.sidebar h4 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-weight: bold;
+}
+
+.sidebar a {
+    display: block;
+    padding: 12px 20px;
+    color: white;
+    text-decoration: none;
+    transition: 0.2s;
+}
+
+.sidebar a:hover {
+    background: rgba(255,255,255,0.2);
+    padding-left: 25px;
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+    margin-left: 250px;
+    padding: 30px;
+}
+
+/* ===== DASHBOARD CARDS ===== */
+.dashboard-card {
+    padding: 25px;
+    border-radius: 20px;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    transition: 0.4s;
+    animation: fadeInUp 0.8s ease-in-out;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-8px) scale(1.02);
+}
+
+/* Card Colors */
+.card-patient {
+    background: linear-gradient(45deg, #4facfe, #00f2fe);
+}
+
+.card-doctor {
+    background: linear-gradient(45deg, #43e97b, #38f9d7);
+}
+
+.card-appointment {
+    background: linear-gradient(45deg, #fa709a, #fee140);
+}
+
+.card-revenue {
+    background: linear-gradient(45deg, #f7971e, #ffd200);
+}
+
+/* ===== Glassmorphism ===== */
+.glass-card {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+/* ===== TABLE ===== */
+.table {
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.table thead {
+    background: var(--primary);
+    color: white;
+}
+
+/* ===== BUTTONS ===== */
+.btn {
+    border-radius: 10px;
+}
+
+/* ===== ANIMATION ===== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
