@@ -1,0 +1,53 @@
+# ──────────────────────────────────────────────
+#  Ansh Hospital Management System — .gitignore
+# ──────────────────────────────────────────────
+
+# 🔐 SECRETS — NEVER commit these
+src/main/resources/db.properties
+src/main/webapp/WEB-INF/classes/db.properties
+*.env
+.env
+config.properties
+
+# 🏗️ Build output
+/build/
+*.class
+*.war
+*.ear
+
+# 📦 Deployed Tomcat WEB-INF/classes (generated at build time)
+src/main/webapp/WEB-INF/classes/
+
+# 🖥️ IDE — Eclipse
+.classpath
+.project
+.settings/
+
+# 🖥️ IDE — IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# 🖥️ IDE — VS Code
+.vscode/
+
+# 🍎 macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# 🪟 Windows
+Thumbs.db
+Thumbs.db:encdata
+Desktop.ini
+$RECYCLE.BIN/
+
+# 📋 Logs
+*.log
+logs/
+
+# 🗂️ Temp
+tmp/
+temp/

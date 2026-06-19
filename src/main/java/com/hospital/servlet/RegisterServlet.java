@@ -1,88 +1,68 @@
 package com.hospital.servlet;
 
+import com.hospital.dao.UserDAO;
+import com.hospital.util.BCryptUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-
+import jakarta.servlet.http.*;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 
-import com.hospital.doa.DBConnection;
-
-/**
- * Servlet implementation class RegisterServlet
- */
 @WebServlet("/RegisterServlet")
 public class RegisterServlet extends HttpServlet {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	/**
-	 * @see HttpServlet#HttpServlet()
-	 */
-	public RegisterServlet() {
-		super();
-		// TODO Auto-generated constructor stub
-	}
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
-	/**
-	 * @see HttpServlet#doGet(HttpServletRequest request, HttpServletResponse
-	 *      response)
-	 */
-	protected void doGet(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
-		// TODO Auto-generated method stub
-		response.getWriter().append("Served at: ").append(request.getContextPath());
-	}
+        String name     = request.getParameter("name");
+        String email    = request.getParameter("email");
+        String password = request.getParameter("password");
 
-	/**
-	 * @see HttpServlet#doPost(HttpServletRequest request, HttpServletResponse
-	 *      response)
-	 */
-	protected void doPost(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
+        // --- Server-side validation ---
+        if (name == null || name.isBlank() || email == null || email.isBlank()
+                || password == null || password.isBlank()) {
+            response.sendRedirect("register.jsp?msg=All+fields+are+required&type=warning");
+            return;
+        }
+        if (password.length() < 6) {
+            response.sendRedirect("register.jsp?msg=Password+must+be+at+least+6+characters&type=warning");
+            return;
+        }
+        if (!email.matches("^[\\w.%+\\-]+@[\\w.\\-]+\\.[a-zA-Z]{2,}$")) {
+            response.sendRedirect("register.jsp?msg=Invalid+email+format&type=warning");
+            return;
+        }
 
-		String name = request.getParameter("name");
-		String email = request.getParameter("email");
-		String password = request.getParameter("password");
+        name = name.trim(); email = email.trim();
 
-// Generate 6-digit OTP
-		String otp = String.valueOf(new java.util.Random().nextInt(900000) + 100000);
+        try {
+            if (UserDAO.emailExists(email)) {
+                response.sendRedirect("register.jsp?msg=Email+already+registered&type=danger");
+                return;
+            }
 
-		try (Connection con = DBConnection.getConnection()) {
+            // Hash password with BCrypt
+            String hashedPassword = BCryptUtil.hashPassword(password);
 
-			if (con == null) {
-				response.sendRedirect("error.jsp?msg=Database Error");
-				return;
-			}
+            // Generate 6-digit OTP
+            String otp = String.valueOf(100000 + new java.security.SecureRandom().nextInt(900000));
 
-			PreparedStatement ps = con
-					.prepareStatement("INSERT INTO users(name, email, password, otp, otp_status) VALUES(?,?,?,?,?)");
+            UserDAO.insert(name, email, hashedPassword, otp);
 
-			ps.setString(1, name);
-			ps.setString(2, email);
-			ps.setString(3, password);
-			ps.setString(4, otp);
-			ps.setString(5, "Pending");
+            // Store email in session for OTP verification
+            HttpSession session = request.getSession(true);
+            session.setAttribute("pendingEmail", email);
+            session.setAttribute("pendingName", name);
 
-			ps.executeUpdate();
+            // In production: email the OTP. For now, log to console for testing.
+            System.out.println("=== OTP for " + email + ": " + otp + " ===");
 
-// Store email in session for OTP verification
-			HttpSession session = request.getSession();
-			session.setAttribute("email", email);
+            response.sendRedirect("otp.jsp?msg=OTP+sent+to+console+(check+Tomcat+logs)&type=info");
 
-// Print OTP in console (for testing)
-			System.out.println("Generated OTP: " + otp);
-
-			response.sendRedirect("otp.jsp");
-
-		} catch (Exception e) {
-			e.printStackTrace();
-			response.sendRedirect("error.jsp?msg=Registration Failed");
-		}
-	}
-
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.sendRedirect("register.jsp?msg=Registration+failed.+Try+again&type=danger");
+        }
+    }
 }

@@ -1,72 +1,66 @@
 package com.hospital.servlet;
 
+import com.hospital.dao.UserDAO;
+import com.hospital.model.User;
+import com.hospital.util.BCryptUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
-
+import jakarta.servlet.http.*;
 import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-
-import com.hospital.doa.DBConnection;
 
 @WebServlet("/LoginServlet")
 public class LoginServlet extends HttpServlet {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	protected void doPost(HttpServletRequest request, HttpServletResponse response)
-			throws ServletException, IOException {
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
-		String email = request.getParameter("email");
-		String password = request.getParameter("password");
+        String email    = request.getParameter("email");
+        String password = request.getParameter("password");
 
-		if (email != null)
-			email = email.trim();
-		if (password != null)
-			password = password.trim();
+        if (email == null || email.isBlank() || password == null || password.isBlank()) {
+            response.sendRedirect("login.jsp?msg=Please+fill+all+fields&type=warning");
+            return;
+        }
 
-		try (Connection con = DBConnection.getConnection()) {
+        email    = email.trim();
+        password = password.trim();
 
-			if (con == null) {
-				response.sendRedirect("login.jsp?msg=Database Error");
-				return;
-			}
+        try {
+            User user = UserDAO.findByEmail(email);
 
-			PreparedStatement ps = con
-					.prepareStatement("SELECT user_id, name, otp_status FROM users WHERE email=? AND password=?");
+            if (user == null) {
+                response.sendRedirect("login.jsp?msg=No+account+found+with+this+email&type=danger");
+                return;
+            }
 
-			ps.setString(1, email);
-			ps.setString(2, password);
+            if (!"Verified".equalsIgnoreCase(user.getOtpStatus())) {
+                response.sendRedirect("login.jsp?msg=Please+verify+your+OTP+first&type=warning");
+                return;
+            }
 
-			ResultSet rs = ps.executeQuery();
+            // Support both BCrypt hashes AND legacy plain-text passwords for migration
+            boolean passwordOk;
+            if (user.getPassword() != null && user.getPassword().startsWith("$2a$")) {
+                passwordOk = BCryptUtil.checkPassword(password, user.getPassword());
+            } else {
+                passwordOk = password.equals(user.getPassword()); // legacy fallback
+            }
 
-			if (rs.next()) {
+            if (passwordOk) {
+                HttpSession session = request.getSession(true);
+                session.setAttribute("user",    user.getName());
+                session.setAttribute("user_id", user.getId());
+                session.setAttribute("email",   user.getEmail());
+                response.sendRedirect("DashboardServlet");
+            } else {
+                response.sendRedirect("login.jsp?msg=Invalid+email+or+password&type=danger");
+            }
 
-				String otpStatus = rs.getString("otp_status");
-
-				if ("Verified".equalsIgnoreCase(otpStatus)) {
-
-					HttpSession session = request.getSession();
-					session.setAttribute("user", rs.getString("name"));
-					session.setAttribute("user_id", rs.getInt("user_id"));
-
-					response.sendRedirect("dashboard.jsp");
-
-				} else {
-					response.sendRedirect("login.jsp?msg=Please verify OTP first");
-				}
-
-			} else {
-				response.sendRedirect("login.jsp?msg=Invalid Email or Password");
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
-			response.sendRedirect("login.jsp?msg=Server Error");
-		}
-	}
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.sendRedirect("login.jsp?msg=Server+error.+Please+try+again&type=danger");
+        }
+    }
 }

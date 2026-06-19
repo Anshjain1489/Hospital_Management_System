@@ -1,101 +1,81 @@
 package com.hospital.servlet;
 
-import jakarta.servlet.annotation.WebServlet;
+import com.hospital.dao.DoctorDAO;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.Part;
-
-import java.io.File;
-import java.io.IOException;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-
-import com.hospital.doa.DBConnection;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.*;
+import java.io.*;
+import java.nio.file.*;
 
 @WebServlet("/DoctorServlet")
-@MultipartConfig
+@MultipartConfig(maxFileSize = 5 * 1024 * 1024) // 5MB max
 public class DoctorServlet extends HttpServlet {
     private static final long serialVersionUID = 1L;
 
-    protected void doPost(HttpServletRequest request,
-                          HttpServletResponse response)
-            throws IOException {
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
         String action = request.getParameter("action");
 
-        try (Connection con = DBConnection.getConnection()) {
-
+        try {
             if ("insert".equals(action)) {
-
-                String name = request.getParameter("name");
+                String name           = request.getParameter("name");
                 String specialization = request.getParameter("specialization");
-                String mobile = request.getParameter("phone");   // from form
-                String email = request.getParameter("email");
-                double fees = Double.parseDouble(request.getParameter("fees"));
+                String mobile         = request.getParameter("phone");
+                String email          = request.getParameter("email");
+                String feesStr        = request.getParameter("fees");
 
-                // ---------- Image Upload ----------
-                Part filePart = request.getPart("image");
-                String fileName = filePart.getSubmittedFileName();
+                // Validation
+                if (name == null || name.isBlank() || specialization == null || specialization.isBlank()
+                        || mobile == null || mobile.isBlank() || feesStr == null || feesStr.isBlank()) {
+                    response.sendRedirect("doctors.jsp?msg=All+fields+required&type=warning");
+                    return;
+                }
+                double fees = Double.parseDouble(feesStr);
 
-                String uploadPath = getServletContext()
-                        .getRealPath("") + File.separator + "images";
-
-                File uploadDir = new File(uploadPath);
-                if (!uploadDir.exists()) {
-                    uploadDir.mkdir();
+                // Image upload
+                Part filePart  = request.getPart("image");
+                String fileName = "default.png";
+                if (filePart != null && filePart.getSize() > 0) {
+                    String original = filePart.getSubmittedFileName();
+                    String ext = original.substring(original.lastIndexOf('.'));
+                    // Sanitize filename
+                    fileName = System.currentTimeMillis() + ext;
+                    String uploadPath = getServletContext().getRealPath("") + File.separator + "images";
+                    new File(uploadPath).mkdirs();
+                    filePart.write(uploadPath + File.separator + fileName);
                 }
 
-                filePart.write(uploadPath + File.separator + fileName);
+                DoctorDAO.insert(name.trim(), specialization.trim(), mobile.trim(),
+                                 email == null ? "" : email.trim(), fees, fileName);
+                response.sendRedirect("doctors.jsp?msg=Doctor+added+successfully&type=success");
 
-                // ---------- Insert Into DB ----------
-                PreparedStatement ps = con.prepareStatement(
-                        "INSERT INTO doctors(name, specialization, mobile, email, fees, image) VALUES(?,?,?,?,?,?)"
-                );
-
-                ps.setString(1, name);
-                ps.setString(2, specialization);
-                ps.setString(3, mobile);
-                ps.setString(4, email);
-                ps.setDouble(5, fees);
-                ps.setString(6, fileName);
-
-                ps.executeUpdate();
+            } else {
+                response.sendRedirect("doctors.jsp");
             }
-
-            response.sendRedirect("doctors.jsp");
-
         } catch (Exception e) {
             e.printStackTrace();
-            response.sendRedirect("error.jsp");
+            response.sendRedirect("doctors.jsp?msg=Error:+" + e.getMessage() + "&type=danger");
         }
     }
 
-    protected void doGet(HttpServletRequest request,
-                         HttpServletResponse response)
-            throws IOException {
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
 
         String action = request.getParameter("action");
-
-        try (Connection con = DBConnection.getConnection()) {
-
+        try {
             if ("delete".equals(action)) {
-
                 int id = Integer.parseInt(request.getParameter("id"));
-
-                PreparedStatement ps = con.prepareStatement(
-                        "DELETE FROM doctors WHERE doctor_id=?"
-                );
-
-                ps.setInt(1, id);
-                ps.executeUpdate();
+                DoctorDAO.delete(id);
+                response.sendRedirect("doctors.jsp?msg=Doctor+deleted&type=success");
+                return;
             }
-
-            response.sendRedirect("doctors.jsp");
-
         } catch (Exception e) {
             e.printStackTrace();
         }
+        response.sendRedirect("doctors.jsp");
     }
 }
